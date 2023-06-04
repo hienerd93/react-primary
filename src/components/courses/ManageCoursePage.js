@@ -6,8 +6,10 @@ import PropTypes from "prop-types";
 import CourseForm from "./CourseForm";
 import { useNavigate, useParams } from "react-router-dom";
 import { newCourse } from "../../../tools/mockData";
+import Spinner from "../common/Spinner";
+import { toast } from "react-toastify";
 
-function ManageCoursesPage({
+export function ManageCoursesPage({
   courses,
   authors,
   loadAuthors,
@@ -16,10 +18,9 @@ function ManageCoursesPage({
 }) {
   const { slug } = useParams();
   // Avoid using Redux for all state. Use plain React state for data only one few components use.(such as form state)
-  const [course, setCourse] = React.useState({
-    ...(slug ? getCourseBySlug(courses, slug) : newCourse),
-  });
-  const [errors] = React.useState({});
+  const [course, setCourse] = React.useState(newCourse);
+  const [errors, setErrors] = React.useState({});
+  const [saving, setSaving] = React.useState(false);
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -36,6 +37,12 @@ function ManageCoursesPage({
     }
   }, []);
 
+  React.useEffect(() => {
+    if (courses.length > 0) {
+      setCourse(slug ? getCourseBySlug(courses, slug) : newCourse);
+    }
+  }, [courses]);
+
   function handleChange(event) {
     const { name, value } = event.target;
     setCourse((preState) => ({
@@ -44,18 +51,45 @@ function ManageCoursesPage({
     }));
   }
 
-  function handleSave(event) {
-    event.preventDefault();
-    saveCourse(course).then(() => navigate("/courses"));
+  // if your API built in Node, you can share your validation logic on client and server via npm
+  function formIsValid() {
+    const { title, authorId, category } = course;
+    const errors = {};
+
+    if (!title) errors.title = "Title is required.";
+    if (!authorId) errors.author = "Author is required";
+    if (!category) errors.category = "Category is required";
+
+    setErrors(errors);
+    // Form is valid if the errors object still has no properties
+    return Object.keys(errors).length === 0;
   }
 
-  return (
+  function handleSave(event) {
+    event.preventDefault();
+    if (!formIsValid()) return;
+    setSaving(true);
+    saveCourse(course)
+      .then(() => {
+        toast.success("Course saved!");
+        navigate("/courses");
+      })
+      .catch((error) => {
+        setSaving(false);
+        setErrors({ onSave: error.message });
+      });
+  }
+
+  return courses.length === 0 || authors.length === 0 ? (
+    <Spinner />
+  ) : (
     <CourseForm
       course={course}
       errors={errors}
       authors={authors}
       onChange={handleChange}
       onSave={handleSave}
+      saving={saving}
     ></CourseForm>
   );
 }

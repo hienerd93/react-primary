@@ -12,7 +12,7 @@ const CourseForm = ({
   errors = {},
 }) => {
   return (
-    <form onSubmit={onSave}>
+    <form onSubmit={onSave} name="course">
       <h2>{course.id ? "Edit" : "Add"} Course</h2>
       {errors.onSave && (
         <div className="alert alert-danger" role="alert">
